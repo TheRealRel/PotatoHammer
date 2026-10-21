@@ -1,8 +1,8 @@
 {
     "name": "PotatoHammer",
-    "version_number": "1.0.2",
+    "version_number": "1.0.3",
     "website_url": "https://github.com/TheRealRel/PotatoHammer",
-    "description": "Sorts the build hammer: every mod's pieces on a tab named after the mod, the game's own pieces where they belong. Client-side, works with any mod.",
+    "description": "Sorts the build hammer: every mod's pieces on a tab named after the mod, other mods' hammers folded in, and the game's own pieces where they belong. Client-side, works with any mod.",
     "dependencies": [
         "denikson-BepInExPack_Valheim-5.4.2351",
         "ValheimModding-Jotunn-2.30.2"

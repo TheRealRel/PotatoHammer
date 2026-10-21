@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.3
+- Pieces from other mods' own hammers (like Odin's Hammer from Odin Architect) are now on the hammer too, on their mod's tab, so one hammer builds everything. Their own hammer still works. New setting: Include other hammers (on).
+
 ## 1.0.2
 - Source and bug reports moved to Potato Hammer's own GitHub repository: [github.com/TheRealRel/PotatoHammer](https://github.com/TheRealRel/PotatoHammer). No changes in game.
 

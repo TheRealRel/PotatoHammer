@@ -14,25 +14,28 @@ namespace PotatoHammer
 {
     // Mods put their build pieces on the hammer wherever they like: in several of the game's tabs, in no tab, or in the
     // wrong one. This moves each mod's hammer pieces to a tab named after the mod and leaves the game's own pieces where
-    // they are. Jotunn tells which mod added each piece. Only the hammer is sorted; mods with their own hammer, the hoe,
-    // the cultivator and the serving tray are left alone. It only changes your own build menu.
+    // they are. Jotunn tells which mod added each piece. Pieces from other mods' own hammers (like Odin's Hammer) are
+    // added to the hammer too, on their mod's tab; those hammers still work as before. The hoe, the cultivator and the
+    // serving tray are left alone. It only changes your own build menu.
     [BepInPlugin(Id, "Potato Hammer", Version)]
     [BepInDependency(Jotunn.Main.ModGuid)]
     [NetworkCompatibility(CompatibilityLevel.NotEnforced, VersionStrictness.None)]
     public class Plugin : BaseUnityPlugin
     {
-        public const string Id = "potato.hammer", Version = "1.0.2";
+        public const string Id = "potato.hammer", Version = "1.0.3";
         private const string TabsSection = "2 - Tabs";
 
         internal static ManualLogSource Log;
         private static Plugin instance;
-        private static ConfigEntry<bool> sortOn;
+        private static ConfigEntry<bool> sortOn, includeTools;
         private static ConfigEntry<string> leaveAlone, extraPieces;
         private static readonly Dictionary<string, ConfigEntry<string>> TabNames = new Dictionary<string, ConfigEntry<string>>();
         // Each piece's own tab, from before it was first moved, so switching a mod off puts its pieces back.
         private static readonly Dictionary<Piece, Piece.PieceCategory> Original = new Dictionary<Piece, Piece.PieceCategory>();
         private static readonly Dictionary<Piece, Piece.UsageTagFlags> OriginalUsage = new Dictionary<Piece, Piece.UsageTagFlags>();
-        private static string lastSummary;
+        // Pieces added to the hammer from other mods' hammers, so they can be taken off again.
+        private static readonly HashSet<GameObject> Added = new HashSet<GameObject>();
+        private static string lastSummary, lastTools;
 
         private void Awake()
         {
@@ -44,6 +47,8 @@ namespace PotatoHammer
                 "Mods whose pieces stay where the mod put them, separated by commas (mod name as in the tab list below, or its id).");
             extraPieces = Config.Bind("1 - General", "Extra pieces", "",
                 "Pieces whose mod can't be told (they stay where they are; the log lists the hammer's pieces by tab), put on a tab by name: piece=Tab, separated by commas. Example: piece_mytable=My Mod.");
+            includeTools = Config.Bind("1 - General", "Include other hammers", true,
+                "Also put the pieces from other mods' own hammers (like Odin's Hammer) on the hammer, each on its mod's tab, so one hammer builds everything. Their own hammer still works. Mods in \"Mods to leave alone\" keep theirs separate. Takes effect the next time you take out the hammer.");
             // Jotunn's record of which mod added each prefab, kept only when a mod asks for it.
             ModQuery.Enable();
             new Harmony(Id).PatchAll(typeof(Plugin).Assembly);
@@ -83,12 +88,74 @@ namespace PotatoHammer
                     $"Tab for {mod.Name}'s hammer pieces ({mod.GUID}). Mods with the same tab name share it; empty = leave its pieces where the mod put them.");
                 TabNames[key] = entry;
             }
-            var skip = leaveAlone.Value.Split(',').Select(part => part.Trim()).Where(part => part.Length > 0);
-            if (skip.Any(part => part.Equals(key, StringComparison.OrdinalIgnoreCase) || part.Equals(mod.GUID, StringComparison.OrdinalIgnoreCase))) return null;
+            if (LeftAlone(mod)) return null;
             string tab = entry.Value.Trim();
             // Left at the mod's own name (the first version's default): shown with spaces, "Boat Additions".
             if (tab == key) tab = Spaced(key);
             return tab.Length > 0 ? tab : null;
+        }
+
+        private static bool LeftAlone(BepInPlugin mod)
+        {
+            string key = Clean(mod.Name);
+            var skip = leaveAlone.Value.Split(',').Select(part => part.Trim()).Where(part => part.Length > 0);
+            return skip.Any(part => part.Equals(key, StringComparison.OrdinalIgnoreCase) || part.Equals(Spaced(key), StringComparison.OrdinalIgnoreCase)
+                || part.Equals(mod.GUID, StringComparison.OrdinalIgnoreCase));
+        }
+
+        // Other mods' hammers: tools a mod added that can also remove pieces, like the hammer (the game's hoe, cultivator
+        // and serving tray are the game's own, and planting tools can't remove pieces). Their pieces are added to the
+        // hammer; Sort then puts them on their mod's tab. Taken off again when switched off.
+        private static void Include(PieceTable hammer)
+        {
+            hammer.m_pieces.RemoveAll(prefab => Added.Contains(prefab));
+            Added.Clear();
+            if (!includeTools.Value || !sortOn.Value || !ObjectDB.instance) return;
+            var have = new HashSet<GameObject>(hammer.m_pieces.Where(prefab => prefab));
+            var jotunnPieces = new Dictionary<string, BepInPlugin>();
+            try
+            {
+                foreach (var custom in ModRegistry.GetPieces())
+                    if (custom?.PiecePrefab && custom.SourceMod != null) jotunnPieces[custom.PiecePrefab.name] = custom.SourceMod;
+            }
+            catch (Exception) { }
+            var tools = new List<string>();
+            foreach (var item in ObjectDB.instance.m_items)
+            {
+                var table = item ? item.GetComponent<ItemDrop>()?.m_itemData?.m_shared?.m_buildPieces : null;
+                if (!table || table == hammer || !table.m_canRemovePieces) continue;
+                BepInPlugin mod = null;
+                try { mod = ModQuery.GetPrefab(item.name)?.SourceMod; }
+                catch (Exception) { }
+                // A tool its mod added without Jotunn: the mod that added its pieces.
+                if (mod == null) mod = table.m_pieces.Where(prefab => prefab).Select(prefab => SourceOf(prefab, jotunnPieces)).FirstOrDefault(owner => owner != null);
+                if (mod == null || LeftAlone(mod)) continue;
+                int count = 0;
+                foreach (var prefab in table.m_pieces)
+                {
+                    if (!prefab || !have.Add(prefab)) continue;
+                    hammer.m_pieces.Add(prefab);
+                    Added.Add(prefab);
+                    count++;
+                }
+                if (count > 0) tools.Add($"{item.name} from {mod.Name} ({count})");
+            }
+            string text = tools.Count == 0 ? "none" : string.Join(", ", tools);
+            if (text == lastTools) return;
+            lastTools = text;
+            Log.LogInfo("Pieces added from other mods' hammers: " + text);
+        }
+
+        // Another build tool taken out: its pieces get back the tabs their mod gave them, so its own menu still works.
+        private static void Restore(PieceTable table)
+        {
+            foreach (var prefab in table.m_pieces)
+            {
+                var piece = prefab ? prefab.GetComponent<Piece>() : null;
+                if (!piece) continue;
+                if (Original.TryGetValue(piece, out var own)) piece.m_category = own;
+                if (OriginalUsage.TryGetValue(piece, out var ownUsage)) piece.m_usage = ownUsage;
+            }
         }
 
         // "BoatAdditions" -> "Boat Additions"; names that already have spaces stay as they are.
@@ -199,7 +266,15 @@ namespace PotatoHammer
         {
             private static void Prefix(PieceTable buildPieces)
             {
-                if (!buildPieces || buildPieces != Hammer()) return;
+                if (!buildPieces) return;
+                if (buildPieces != Hammer())
+                {
+                    try { Restore(buildPieces); }
+                    catch (Exception e) { Log.LogWarning("Couldn't restore that tool's tabs: " + e); }
+                    return;
+                }
+                try { Include(buildPieces); }
+                catch (Exception e) { Log.LogWarning("Couldn't add other mods' hammer pieces: " + e); }
                 try { Sort(buildPieces); }
                 catch (Exception e) { Log.LogWarning("Couldn't sort the hammer: " + e); }
             }
