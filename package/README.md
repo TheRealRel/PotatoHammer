@@ -7,7 +7,7 @@
 - Each piece shows on its mod's tab only, not also under the game's categories (Walls, Building...) or under other mods' tags.
 - Client-side: it only changes your own build menu. The server and other players don't need it.
 
-Part of the **PotatoClient** pack for the Potato Server. 🛠️ Source and bug reports: [github.com/TheRealRel/PotatoTweaks](https://github.com/TheRealRel/PotatoTweaks)
+Part of the **PotatoClient** pack for the Potato Server. 🛠️ Source and bug reports: [github.com/TheRealRel/PotatoHammer](https://github.com/TheRealRel/PotatoHammer)
 
 ## Settings
 
