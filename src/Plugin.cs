@@ -21,7 +21,7 @@ namespace PotatoHammer
     [NetworkCompatibility(CompatibilityLevel.NotEnforced, VersionStrictness.None)]
     public class Plugin : BaseUnityPlugin
     {
-        public const string Id = "potato.hammer", Version = "1.0.1";
+        public const string Id = "potato.hammer", Version = "1.0.2";
         private const string TabsSection = "2 - Tabs";
 
         internal static ManualLogSource Log;
