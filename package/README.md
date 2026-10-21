@@ -1,4 +1,4 @@
-# 🔨 Potato Hammer
+# 🪵 Potato Hammer
 
 **Sorts the build hammer by mod.** Mods put their build pieces wherever they like: spread over several of the game's categories, in none, in the wrong one, or under each other's tabs. Potato Hammer moves every mod's hammer pieces to **a tab named after the mod**, and leaves the game's own pieces in the game's tabs.
 
