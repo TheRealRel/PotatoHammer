@@ -22,7 +22,7 @@ namespace PotatoHammer
     [NetworkCompatibility(CompatibilityLevel.NotEnforced, VersionStrictness.None)]
     public class Plugin : BaseUnityPlugin
     {
-        public const string Id = "potato.hammer", Version = "1.0.4";
+        public const string Id = "potato.hammer", Version = "1.0.5";
         private const string TabsSection = "2 - Tabs";
 
         internal static ManualLogSource Log;
@@ -35,6 +35,8 @@ namespace PotatoHammer
         private static readonly Dictionary<Piece, Piece.UsageTagFlags> OriginalUsage = new Dictionary<Piece, Piece.UsageTagFlags>();
         // Pieces added to the hammer from other mods' hammers, so they can be taken off again.
         private static readonly HashSet<GameObject> Added = new HashSet<GameObject>();
+        private static readonly HashSet<string> VanillaTools = new HashSet<string> { "Hammer", "Hoe", "Cultivator" };
+        private static readonly HashSet<string> VanillaTables = new HashSet<string> { "_HammerPieceTable", "_HoePieceTable", "_CultivatorPieceTable", "_FeasterPieceTable" };
         private static string lastSummary, lastTools;
 
         private void Awake()
@@ -104,7 +106,7 @@ namespace PotatoHammer
         }
 
         // Other mods' hammers: tools a mod added that can also remove pieces, like the hammer (the game's hoe, cultivator
-        // and serving tray are the game's own, and planting tools can't remove pieces). Their pieces are added to the
+        // and serving tray never count, whatever mods do to them). Their pieces are added to the
         // hammer; Sort then puts them on their mod's tab. Taken off again when switched off.
         private static void Include(PieceTable hammer)
         {
@@ -127,9 +129,14 @@ namespace PotatoHammer
                 BepInPlugin mod = null;
                 try { mod = ModQuery.GetPrefab(item.name)?.SourceMod; }
                 catch (Exception) { }
-                // A tool its mod added without Jotunn: the mod that added its pieces.
-                if (mod == null) mod = table.m_pieces.Where(prefab => prefab).Select(prefab => SourceOf(prefab, jotunnPieces)).FirstOrDefault(owner => owner != null);
-                if (mod == null || LeftAlone(mod)) continue;
+                // The game's own tools stay separate, even when a mod lets them remove pieces (Plant Everything does
+                // that to the cultivator) or adds pieces to them.
+                if (VanillaTools.Contains(item.name) || VanillaTables.Contains(table.name)) continue;
+                // A tool its mod added without Jotunn: the mod that added most of its pieces.
+                if (mod == null) mod = table.m_pieces.Where(prefab => prefab).Select(prefab => SourceOf(prefab, jotunnPieces))
+                    .Where(owner => owner != null).GroupBy(owner => owner.GUID).OrderByDescending(group => group.Count()).Select(group => group.First()).FirstOrDefault();
+                if (mod == null) continue;
+                if (LeftAlone(mod)) continue;
                 int count = 0;
                 foreach (var prefab in table.m_pieces)
                 {

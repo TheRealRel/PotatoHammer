@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.5
+- Fix: the game's own cultivator (and hoe and serving tray) are no longer merged into the hammer. Plant Everything lets the cultivator remove pieces, which made it look like a mod's hammer, so saplings, crops and Wizardry's mushrooms showed up on the hammer. Odin's Hammer and other mods' hammers are still merged.
+
 ## 1.0.4
 - The mod page links the author's Discord for questions (bug reports stay on GitHub) and has a License section: the code is MIT, free to use, change and share; the icon is CC BY-NC 4.0.
 
