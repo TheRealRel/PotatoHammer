@@ -9,6 +9,8 @@
 
 Part of the **PotatoClient** pack for the Potato Server. 🛠️ Source and bug reports: [github.com/TheRealRel/PotatoHammer](https://github.com/TheRealRel/PotatoHammer)
 
+💬 Questions: Discord [relanebeis](https://discord.com/users/373574370267889674)
+
 ## Settings
 
 In `BepInEx/config/potato.hammer.cfg`, or in game with Configuration Manager. Changes take effect the next time you take out the hammer.
@@ -25,3 +27,7 @@ In `BepInEx/config/potato.hammer.cfg`, or in game with Configuration Manager. Ch
 
 - [BepInExPack Valheim](https://thunderstore.io/c/valheim/p/denikson/BepInExPack_Valheim/)
 - [Jotunn](https://thunderstore.io/c/valheim/p/ValheimModding/Jotunn/)
+
+## License
+
+The code is under the MIT License: use it, change it and share it freely. The icon is © TheRealRel under [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/): free to share and adapt with credit, but not for commercial use. See `LICENSE`.

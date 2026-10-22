@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.4
+- The mod page links the author's Discord for questions (bug reports stay on GitHub) and has a License section: the code is MIT, free to use, change and share; the icon is CC BY-NC 4.0.
+
 ## 1.0.3
 - Pieces from other mods' own hammers (like Odin's Hammer from Odin Architect) are now on the hammer too, on their mod's tab, so one hammer builds everything. Their own hammer still works. New setting: Include other hammers (on).
 
