@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.6
+- New: snap points for pieces that lack them. Mods' pieces with only one or two snap points of their own (like Modular Ladders' ladders) get points worked out from their shape: corners, edge middles, top and bottom centres. Any other piece can be given them in game: look at it with the hammer out and press Ctrl + K, or type snappoints in the console. Nothing is saved into your world.
+- New: the snap point you cycle to while building is named by where it sits on the piece ("Top front left corner") instead of its mod's name for it ("_snappoint (5)"). Setting: Plain snap point names.
+- A rewritten mod page.
+
 ## 1.0.5
 - Fix: the game's own cultivator (and hoe and serving tray) are no longer merged into the hammer. Plant Everything lets the cultivator remove pieces, which made it look like a mod's hammer, so saplings, crops and Wizardry's mushrooms showed up on the hammer. Odin's Hammer and other mods' hammers are still merged.
 
