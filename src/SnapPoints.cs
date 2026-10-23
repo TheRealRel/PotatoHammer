@@ -18,7 +18,7 @@ namespace PotatoHammer
     internal static class SnapPoints
     {
         private const string Section = "3 - Snap points";
-        private static ConfigEntry<bool> on, automatic;
+        private static ConfigEntry<bool> on, automatic, plainNames;
         private static ConfigEntry<int> fewest;
         private static ConfigEntry<KeyboardShortcut> key;
         private static ConfigEntry<string> chosen, refused;
@@ -34,6 +34,8 @@ namespace PotatoHammer
                 "Give pieces that lack them snap points from their shape: corners, edge middles, top and bottom centres. Only your own building changes.");
             automatic = config.Bind(Section, "Automatic for mod pieces", true,
                 "Mods' pieces with only one or two snap points of their own get them without asking. Pieces with none (usually decorations meant to go anywhere) and the game's own pieces only get them when you pick them.");
+            plainNames = config.Bind(Section, "Plain snap point names", true,
+                "When you pick a snap point while building, name it by where it sits on the piece (Top front left corner, Bottom back edge, Left centre) instead of the name its mod gave it (_snappoint (5), Left 1).");
             fewest = config.Bind(Section, "Automatic up to", 2,
                 new ConfigDescription("Mods' pieces with at least one and at most this many snap points of their own get them automatically.", new AcceptableValueRange<int>(1, 8)));
             key = config.Bind(Section, "Pick key", new KeyboardShortcut(KeyCode.K, KeyCode.LeftControl),
@@ -117,6 +119,38 @@ namespace PotatoHammer
             }
             Points[prefab] = list;
             return list;
+        }
+
+        private static readonly Dictionary<string, Bounds?> Boxes = new Dictionary<string, Bounds?>();
+
+        // Where a point sits on its piece, in words: each direction is low, middle or high within the piece's box (flat
+        // directions don't count), so three ends make a corner, two an edge, one a side's centre.
+        internal static string Describe(string prefab, Vector3 local)
+        {
+            if (!Boxes.TryGetValue(prefab, out var box))
+            {
+                var source = ZNetScene.instance ? ZNetScene.instance.GetPrefab(prefab) : null;
+                box = source && Box(source.transform, out var min, out var max) ? new Bounds((min + max) / 2f, max - min) : (Bounds?)null;
+                Boxes[prefab] = box;
+            }
+            if (box == null) return null;
+            var b = box.Value;
+            string Side(float value, float low, float high, string lowWord, string highWord)
+            {
+                float size = high - low;
+                if (size < 0.05f) return null;
+                if (value <= low + size * 0.2f) return lowWord;
+                if (value >= high - size * 0.2f) return highWord;
+                return null;
+            }
+            string y = Side(local.y, b.min.y, b.max.y, "Bottom", "Top");
+            string z = Side(local.z, b.min.z, b.max.z, "back", "front");
+            string x = Side(local.x, b.min.x, b.max.x, "left", "right");
+            var words = new[] { y, z, x }.Where(word => word != null).ToList();
+            if (words.Count == 0) return "Centre";
+            string text = string.Join(" ", words);
+            text = char.ToUpper(text[0]) + text.Substring(1);
+            return words.Count == 3 ? text + " corner" : words.Count == 2 ? text + " edge" : text + " centre";
         }
 
         // The piece's outer box in its own space: from its solid colliders, or from its models when it has none.
@@ -258,11 +292,37 @@ namespace PotatoHammer
             {
                 try
                 {
-                    Vanilla.Clear(); Points.Clear(); Automatic.Clear();
+                    Vanilla.Clear(); Points.Clear(); Automatic.Clear(); Boxes.Clear();
                     foreach (var prefab in __instance.m_prefabs) if (prefab) Vanilla.Add(prefab.name);
                     foreach (var prefab in __instance.m_nonNetViewPrefabs) if (prefab) Vanilla.Add(prefab.name);
                 }
                 catch (Exception e) { Plugin.Log.LogWarning("Couldn't list the game's own pieces: " + e.Message); }
+            }
+        }
+
+        // The game names the snap point you pick while building by its object name, which many mods leave as
+        // "_snappoint (5)" or "Left 1". This names it by where it sits instead.
+        [HarmonyPatch(typeof(Player), nameof(Player.Message))]
+        private static class SnapMessage
+        {
+            private static readonly AccessTools.FieldRef<Player, int> Manual = AccessTools.FieldRefAccess<Player, int>("m_manualSnapPoint");
+            private static readonly AccessTools.FieldRef<Player, List<Transform>> Ghost = AccessTools.FieldRefAccess<Player, List<Transform>>("m_tempSnapPoints1");
+            private static readonly AccessTools.FieldRef<Player, GameObject> Placement = AccessTools.FieldRefAccess<Player, GameObject>("m_placementGhost");
+
+            private static void Prefix(Player __instance, ref string msg)
+            {
+                try
+                {
+                    if (plainNames == null || !plainNames.Value || msg == null || !msg.StartsWith("$msg_snapping ")) return;
+                    int index = Manual(__instance);
+                    var points = Ghost(__instance);
+                    var ghost = Placement(__instance);
+                    if (index < 0 || points == null || index >= points.Count || !ghost || !points[index]) return;
+                    if (points[index].GetComponent<Marker>()) return;
+                    string name = Describe(Utils.GetPrefabName(ghost), points[index].localPosition);
+                    if (name != null) msg = "$msg_snapping " + name;
+                }
+                catch (Exception) { }
             }
         }
 
