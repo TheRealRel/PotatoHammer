@@ -18,7 +18,6 @@ namespace PotatoHammer
     internal static class SnapPoints
     {
         private const string Section = "3 - Snap points";
-        private const string Prefix = "Potato snap: ";
         private static ConfigEntry<bool> on, automatic;
         private static ConfigEntry<int> fewest;
         private static ConfigEntry<KeyboardShortcut> key;
@@ -82,7 +81,7 @@ namespace PotatoHammer
             for (int i = 0; i < root.childCount; i++)
             {
                 var child = root.GetChild(i);
-                if (child.CompareTag("snappoint") && !child.name.StartsWith(Prefix)) list.Add(child);
+                if (child.CompareTag("snappoint") && !child.GetComponent<Marker>()) list.Add(child);
             }
             return list;
         }
@@ -171,7 +170,7 @@ namespace PotatoHammer
             var root = piece.transform;
             var ours = new List<GameObject>();
             for (int i = 0; i < root.childCount; i++)
-                if (root.GetChild(i).name.StartsWith(Prefix)) ours.Add(root.GetChild(i).gameObject);
+                if (root.GetChild(i).GetComponent<Marker>()) ours.Add(root.GetChild(i).gameObject);
             string prefab = Utils.GetPrefabName(piece.gameObject);
             bool wanted = Wants(prefab);
             if (!wanted || ours.Count > 0)
@@ -181,7 +180,8 @@ namespace PotatoHammer
             }
             foreach (var point in PointsFor(prefab))
             {
-                var go = new GameObject(Prefix + point.Key) { tag = "snappoint" };
+                var go = new GameObject(point.Key) { tag = "snappoint" };
+                go.AddComponent<Marker>();
                 go.transform.SetParent(root, false);
                 go.transform.localPosition = point.Value;
             }
@@ -239,6 +239,9 @@ namespace PotatoHammer
             if (!Player.m_localPlayer.InPlaceMode()) return;
             Pick(null);
         }
+
+        // Marks the points this adds, so their names can stay plain ("Top front edge") as the game shows them when snapping.
+        internal class Marker : MonoBehaviour { }
 
         private class Command : ConsoleCommand
         {
