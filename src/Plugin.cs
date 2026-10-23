@@ -14,7 +14,7 @@ namespace PotatoHammer
 {
     // Mods put their build pieces on the hammer wherever they like: in several of the game's tabs, in no tab, or in the
     // wrong one. This moves each mod's hammer pieces to a tab named after the mod and leaves the game's own pieces where
-    // they are. Jotunn tells which mod added each piece. Pieces from other mods' own hammers (like Odin's Hammer) are
+    // they are, and gives pieces that lack them snap points (SnapPoints.cs). Jotunn tells which mod added each piece. Pieces from other mods' own hammers (like Odin's Hammer) are
     // added to the hammer too, on their mod's tab; those hammers still work as before. The hoe, the cultivator and the
     // serving tray are left alone. It only changes your own build menu.
     [BepInPlugin(Id, "Potato Hammer", Version)]
@@ -22,7 +22,7 @@ namespace PotatoHammer
     [NetworkCompatibility(CompatibilityLevel.NotEnforced, VersionStrictness.None)]
     public class Plugin : BaseUnityPlugin
     {
-        public const string Id = "potato.hammer", Version = "1.0.5";
+        public const string Id = "potato.hammer", Version = "1.0.6";
         private const string TabsSection = "2 - Tabs";
 
         internal static ManualLogSource Log;
@@ -51,10 +51,13 @@ namespace PotatoHammer
                 "Pieces whose mod can't be told (they stay where they are; the log lists the hammer's pieces by tab), put on a tab by name: piece=Tab, separated by commas. Example: piece_mytable=My Mod.");
             includeTools = Config.Bind("1 - General", "Include other hammers", true,
                 "Also put the pieces from other mods' own hammers (like Odin's Hammer) on the hammer, each on its mod's tab, so one hammer builds everything. Their own hammer still works. Mods in \"Mods to leave alone\" keep theirs separate. Takes effect the next time you take out the hammer.");
+            SnapPoints.Bind(Config);
             // Jotunn's record of which mod added each prefab, kept only when a mod asks for it.
             ModQuery.Enable();
             new Harmony(Id).PatchAll(typeof(Plugin).Assembly);
         }
+
+        private void Update() => SnapPoints.Update();
 
         private static PieceTable Hammer()
         {
