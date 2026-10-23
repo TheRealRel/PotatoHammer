@@ -33,7 +33,7 @@ namespace PotatoHammer
         {
             on = config.Bind(Section, "Add snap points", true,
                 "Give pieces that lack them snap points from their shape: corners, edge middles, top and bottom centres. Only your own building changes.");
-            automatic = config.Bind(Section, "Automatic for mods' pieces", true,
+            automatic = config.Bind(Section, "Automatic for mod pieces", true,
                 "Mods' pieces with only one or two snap points of their own get them without asking. Pieces with none (usually decorations meant to go anywhere) and the game's own pieces only get them when you pick them.");
             fewest = config.Bind(Section, "Automatic up to", 2,
                 new ConfigDescription("Mods' pieces with at least one and at most this many snap points of their own get them automatically.", new AcceptableValueRange<int>(1, 8)));
@@ -57,7 +57,7 @@ namespace PotatoHammer
 
         private static bool Wants(string prefab)
         {
-            if (!on.Value) return false;
+            if (on == null || refused == null || !on.Value) return false;
             if (List(refused).Contains(prefab)) return false;
             if (List(chosen).Contains(prefab)) return true;
             return automatic.Value && IsAutomatic(prefab);
@@ -234,7 +234,7 @@ namespace PotatoHammer
 
         internal static void Update()
         {
-            if (!on.Value || !Player.m_localPlayer || !key.Value.IsDown()) return;
+            if (on == null || key == null || !on.Value || !Player.m_localPlayer || !key.Value.IsDown()) return;
             if (global::Console.IsVisible() || Chat.instance && Chat.instance.HasFocus() || TextInput.IsVisible() || Menu.IsVisible() || InventoryGui.IsVisible()) return;
             if (!Player.m_localPlayer.InPlaceMode()) return;
             Pick(null);

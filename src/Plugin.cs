@@ -51,7 +51,9 @@ namespace PotatoHammer
                 "Pieces whose mod can't be told (they stay where they are; the log lists the hammer's pieces by tab), put on a tab by name: piece=Tab, separated by commas. Example: piece_mytable=My Mod.");
             includeTools = Config.Bind("1 - General", "Include other hammers", true,
                 "Also put the pieces from other mods' own hammers (like Odin's Hammer) on the hammer, each on its mod's tab, so one hammer builds everything. Their own hammer still works. Mods in \"Mods to leave alone\" keep theirs separate. Takes effect the next time you take out the hammer.");
-            SnapPoints.Bind(Config);
+            // The snap points are an extra: if they can't start, the hammer sorting still does.
+            try { SnapPoints.Bind(Config); }
+            catch (Exception e) { Log.LogError("Snap points are off: " + e.Message); }
             // Jotunn's record of which mod added each prefab, kept only when a mod asks for it.
             ModQuery.Enable();
             new Harmony(Id).PatchAll(typeof(Plugin).Assembly);
